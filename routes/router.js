@@ -7,9 +7,33 @@ const accountSid = "AC020629f62d4e5435b67a7c0449a474b5";
 const authToken = "c5605ada617a86215c6aca38159e0af1";
 const client = require("twilio")(accountSid, authToken);
 
-const dataFile = path.join(__dirname, "../data/medInfo.json"); // Improved path handling
+const dataFile = path.join(__dirname, "../data/medInfo.json");
+const registrationFile = path.join(__dirname, "../data/signin.json");
 
-// Function to read medication data
+function readRegistrationData() {
+    try {
+      const registrationData = fs.readFileSync(registrationFile, "utf8"); // Read as UTF-8 for better handling
+      return JSON.parse(registrationData);
+    } catch (err) {
+      console.error("Error reading registration data:", err);
+      // Consider returning an empty array or a default value in case of errors
+      return [];
+    }
+  }
+
+
+  function writeRegistrationData(data) {
+    try {
+      fs.writeFileSync(registrationFile, JSON.stringify(data, null, 2), "utf8"); // Formatted JSON for readability
+    } catch (err) {
+      console.error("Error writing registration data:", err);
+    }
+  }
+
+  
+
+
+
 function readMedData() {
   try {
     const medData = fs.readFileSync(dataFile, "utf8"); // Read as UTF-8 for better handling
@@ -30,14 +54,40 @@ function writeMedData(data) {
   }
 }
 
+
+
+router.post('/register', (req, res) => {
+    const { username, email, phone, password } = req.body;
+    console.log("Received data:", req.body);
+  
+    // Validate user data (implement your validation logic here)
+    if (!username || !email || !phone || !password) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    const registrationData = readRegistrationData();
+    const newRegistrationData = {
+      id: uniqid(),
+      username,
+      email,
+      phone,
+      password
+    };
+  
+    registrationData.push(newRegistrationData);
+    writeRegistrationData(registrationData);
+  
+    res.status(201).json(newRegistrationData);
+  
+    res.status(201).json({ message: 'Registration successful' });
+  });
+
+
+
 // Route handler for GET requests to `/medication/create`
 router.get("/medication/create", (req, res) => {
   const medData = readMedData();
   res.status(200).json(medData);
 });
-
-
-
 
 
 router.get("/medication/sms", (req, res) => {
@@ -51,10 +101,6 @@ router.get("/medication/sms", (req, res) => {
     // .done();
   res.status(200);
 });
-
-
-
-
 
 // Route handler for POST requests to `/medication/create`
 router.post("/medication/create", (req, res) => {
